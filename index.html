@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学费助手 - 课外机构学费管理工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #0a7ea4;
+            --background: #ffffff;
+            --surface: #f5f5f5;
+            --foreground: #11181c;
+            --muted: #687076;
+            --border: #e5e7eb;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            background-color: var(--background);
+            color: var(--foreground);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #root {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .app-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            background-color: var(--background);
+        }
+
+        .app-header h1 {
+            font-size: 28px;
+            margin-bottom: 4px;
+        }
+
+        .app-header p {
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        .tab-nav {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            background-color: var(--background);
+            padding: 0 20px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 16px 20px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: var(--muted);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 14px;
+        }
+
+        .tab-btn:hover {
+            color: var(--foreground);
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .app-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .search-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .search-bar input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .students-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .student-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .student-card:hover {
+            background: var(--background);
+            border-color: var(--primary);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .student-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .student-name {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .status-badge {
+            background: var(--success);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .course-info, .hours-info, .absence-info {
+            font-size: 13px;
+            color: var(--muted);
+            margin: 4px 0;
+        }
+
+        .student-card-footer {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .fee-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            margin: 4px 0;
+        }
+
+        .fee-row.final {
+            font-weight: 600;
+            color: var(--primary);
+            margin-top: 8px;
+        }
+
+        .fee-label {
+            color: var(--muted);
+        }
+
+        .fee-value {
+            font-weight: 600;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .empty-message {
+            font-size: 16px;
+            color: var(--muted);
+        }
+
+        .btn-add-first {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-add-first:hover {
+            opacity: 0.9;
+            transform: scale(1.02);
+        }
+
+        .fab {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(10, 126, 164, 0.3);
+            transition: all 0.2s ease;
+            z-index: 100;
+        }
+
+        .fab:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(10, 126, 164, 0.4);
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal-container {
+            background: var(--background);
+            border-radius: 16px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-header h2 {
+            font-size: 20px;
+            margin: 0;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--muted);
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--foreground);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(10, 126, 164, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .help-text {
+            display: block;
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            padding: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+        }
+
+        .btn-cancel {
+            background: var(--surface);
+            color: var(--foreground);
+            border: 1px solid var(--border);
+        }
+
+        .btn-cancel:hover {
+            background: var(--border);
+        }
+
+        .btn-error {
+            background: var(--error);
+            color: white;
+        }
+
+        .btn-error:hover {
+            opacity: 0.9;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .summary-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .summary-label {
+            font-size: 13px;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+
+        .summary-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 20px 0 12px 0;
+            color: var(--foreground);
+        }
+
+        .students-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .detail-section {
+            margin-bottom: 16px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+
+        .info-row.final {
+            font-weight: 600;
+            color: var(--primary);
+            border-bottom: none;
+            padding-top: 16px;
+        }
+
+        .info-label {
+            color: var(--muted);
+        }
+
+        .info-value {
+            font-weight: 600;
+        }
+
+        .info-value.final {
+            color: var(--primary);
+            font-size: 18px;
+        }
+
+        @media (max-width: 600px) {
+            .app-header {
+                padding: 16px;
+            }
+
+            .app-header h1 {
+                font-size: 24px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .fab {
+                bottom: 16px;
+                right: 16px;
+                width: 48px;
+                height: 48px;
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root">
+        <div class="app-header">
+            <h1>学费助手</h1>
+            <p>课外机构学费管理工具</p>
+        </div>
+
+        <div class="tab-nav">
+            <button class="tab-btn active" onclick="switchTab('students')">📚 学生</button>
+            <button class="tab-btn" onclick="switchTab('summary')">📊 统计</button>
+        </div>
+
+        <div class="app-content">
+            <!-- Students Tab -->
+            <div id="students-tab" class="tab-content active">
+                <div class="search-bar">
+                    <input type="text" id="search-input" placeholder="搜索学生或课程..." onkeyup="handleSearch()">
+                </div>
+                <div id="students-list" class="students-list"></div>
+            </div>
+
+            <!-- Summary Tab -->
+            <div id="summary-tab" class="tab-content">
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <div class="summary-label">总学生数</div>
+                        <div class="summary-value" id="total-students">0</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-label">待结算</div>
+                        <div class="summary-value" id="unsettled-count">0</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-label">待结算金额</div>
+                        <div class="summary-value" id="unsettled-amount">¥0.00</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-label">已结算金额</div>
+                        <div class="summary-value" id="settled-amount">¥0.00</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-label">总金额</div>
+                        <div class="summary-value" id="total-amount">¥0.00</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-label">平均单价</div>
+                        <div class="summary-value" id="avg-price">¥0.00</div>
+                    </div>
+                </div>
+
+                <div id="settled-list-container" style="margin-top: 30px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Modal -->
+    <div id="form-modal" class="modal-overlay" onclick="if(event.target === this) closeForm()">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 id="form-title">添加学生</h2>
+                <button class="close-btn" onclick="closeForm()">✕</button>
+            </div>
+            <form id="student-form" class="modal-content" onsubmit="handleFormSubmit(event)">
+                <div class="form-group">
+                    <label for="name">学生姓名 *</label>
+                    <input type="text" id="name" placeholder="输入学生姓名" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="courseName">课程名称 *</label>
+                    <input type="text" id="courseName" placeholder="例如：数学、英语、编程" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="totalHours">总课时数 *</label>
+                        <input type="number" id="totalHours" placeholder="输入总课时数" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="pricePerHour">单价（元/课时）*</label>
+                        <input type="number" id="pricePerHour" placeholder="输入单价" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="absenceCount">缺勤次数</label>
+                    <input type="number" id="absenceCount" placeholder="输入缺勤次数（默认为0）" value="0">
+                    <small class="help-text">缺勤次数将从应收学费中扣除</small>
+                </div>
+            </form>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-cancel" onclick="closeForm()">取消</button>
+                <button type="button" class="btn btn-primary" onclick="submitForm()">添加</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div id="detail-modal" class="modal-overlay" onclick="if(event.target === this) closeDetail()">
+        <div class="modal-container">
+            <div class="modal-header">
+                <div>
+                    <h2 id="detail-name"></h2>
+                    <p id="detail-course" style="margin: 0; font-size: 14px; color: var(--muted);"></p>
+                </div>
+                <span id="detail-badge" class="status-badge" style="display: none;">已结算</span>
+                <button class="close-btn" onclick="closeDetail()">✕</button>
+            </div>
+
+            <div class="modal-content" id="detail-content"></div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-primary" onclick="editCurrentStudent()">编辑</button>
+                <button type="button" class="btn btn-error" onclick="deleteCurrentStudent()">删除</button>
+                <button type="button" class="btn btn-cancel" onclick="closeDetail()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <button class="fab" id="fab-btn" onclick="openForm()">+</button>
+
+    <script>
+        // Storage Key
+        const STORAGE_KEY = 'tuition_manager_students';
+
+        // State
+        let students = [];
+        let editingStudentId = null;
+        let selectedStudentId = null;
+
+        // Initialize
+        function init() {
+            loadStudents();
+            renderStudents();
+            renderSummary();
+        }
+
+        // Storage Functions
+        function loadStudents() {
+            const data = localStorage.getItem(STORAGE_KEY);
+            students = data ? JSON.parse(data) : [];
+        }
+
+        function saveStudents() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(students));
+        }
+
+        function generateId() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        // Calculate Financial
+        function calculateFinancial(student) {
+            const totalFee = student.totalHours * student.pricePerHour;
+            const absenceFee = student.absenceCount * student.pricePerHour;
+            const finalFee = Math.max(0, totalFee - absenceFee);
+            return { totalFee, absenceFee, finalFee };
+        }
+
+        function formatCurrency(value) {
+            return `¥${value.toFixed(2)}`;
+        }
+
+        // Tab Switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            const buttons = document.querySelectorAll('.tab-btn');
+            buttons.forEach(btn => {
+                if (btn.textContent.includes(tabName === 'students' ? '学生' : '统计')) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+
+        // Search
+        function handleSearch() {
+            renderStudents();
+        }
+
+        function getFilteredStudents() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            if (query.trim() === '') {
+                return students;
+            }
+            return students.filter(s => 
+                s.name.toLowerCase().includes(query) || 
+                s.courseName.toLowerCase().includes(query)
+            );
+        }
+
+        // Render Students
+        function renderStudents() {
+            const filtered = getFilteredStudents();
+            const unsettled = filtered.filter(s => !s.isSettled);
+            const settled = filtered.filter(s => s.isSettled);
+
+            let html = '';
+
+            if (unsettled.length > 0) {
+                html += `<h3 class="section-title">待结算 (${unsettled.length})</h3>`;
+                html += '<div class="students-section">';
+                unsettled.forEach(student => {
+                    html += renderStudentCard(student);
+                });
+                html += '</div>';
+            }
+
+            if (settled.length > 0) {
+                html += `<h3 class="section-title">已结算 (${settled.length})</h3>`;
+                html += '<div class="students-section">';
+                settled.forEach(student => {
+                    html += renderStudentCard(student);
+                });
+                html += '</div>';
+            }
+
+            if (filtered.length === 0) {
+                html = `
+                    <div class="empty-state">
+                        <p class="empty-message">${document.getElementById('search-input').value.trim() === '' ? '暂无学生记录' : '未找到匹配的学生'}</p>
+                        ${document.getElementById('search-input').value.trim() === '' ? '<button class="btn-add-first" onclick="openForm()">添加第一个学生</button>' : ''}
+                    </div>
+                `;
+            }
+
+            document.getElementById('students-list').innerHTML = html;
+        }
+
+        function renderStudentCard(student) {
+            const financial = calculateFinancial(student);
+            const badge = student.isSettled ? '<span class="status-badge">已结算</span>' : '';
+            const absenceHtml = student.absenceCount > 0 
+                ? `<div class="absence-info">缺勤：${student.absenceCount}次 (减免 ${formatCurrency(financial.absenceFee)})</div>`
+                : '';
+
+            return `
+                <div class="student-card" onclick="openDetail('${student.id}')">
+                    <div class="student-card-header">
+                        <h3 class="student-name">${student.name}</h3>
+                        ${badge}
+                    </div>
+                    <div>
+                        <p class="course-info">课程：${student.courseName}</p>
+                        <p class="hours-info">课时：${student.totalHours}小时 × ${formatCurrency(student.pricePerHour)}/小时</p>
+                        ${absenceHtml}
+                    </div>
+                    <div class="student-card-footer">
+                        <div class="fee-row">
+                            <span class="fee-label">应收学费：</span>
+                            <span class="fee-value">${formatCurrency(financial.totalFee)}</span>
+                        </div>
+                        <div class="fee-row final">
+                            <span class="fee-label">最终应收：</span>
+                            <span class="fee-value">${formatCurrency(financial.finalFee)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Render Summary
+        function renderSummary() {
+            const stats = calculateStats();
+            
+            document.getElementById('total-students').textContent = stats.totalStudents;
+            document.getElementById('unsettled-count').textContent = stats.unsettledCount;
+            document.getElementById('unsettled-amount').textContent = formatCurrency(stats.unsettledAmount);
+            document.getElementById('settled-amount').textContent = formatCurrency(stats.settledAmount);
+            document.getElementById('total-amount').textContent = formatCurrency(stats.totalAmount);
+            document.getElementById('avg-price').textContent = formatCurrency(stats.avgPrice);
+
+            // Render settled list
+            const settled = students.filter(s => s.isSettled);
+            let settledHtml = '';
+            
+            if (settled.length > 0) {
+                settledHtml = `
+                    <h3 class="section-title">已结算学生 (${settled.length})</h3>
+                    <div class="students-section">
+                        ${settled.map(s => {
+                            const financial = calculateFinancial(s);
+                            return `
+                                <div class="student-card" onclick="openDetail('${s.id}')">
+                                    <div class="student-card-header">
+                                        <h3 class="student-name">${s.name}</h3>
+                                        <span class="status-badge">已结算</span>
+                                    </div>
+                                    <p class="course-info">课程：${s.courseName}</p>
+                                    <div class="student-card-footer">
+                                        <div class="fee-row final">
+                                            <span class="fee-label">应收：</span>
+                                            <span class="fee-value">${formatCurrency(financial.finalFee)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            }
+            
+            document.getElementById('settled-list-container').innerHTML = settledHtml;
+        }
+
+        function calculateStats() {
+            const totalStudents = students.length;
+            const unsettledStudents = students.filter(s => !s.isSettled);
+            const unsettledCount = unsettledStudents.length;
+            
+            let unsettledAmount = 0;
+            let settledAmount = 0;
+            let totalAmount = 0;
+            let totalPrice = 0;
+            let priceCount = 0;
+
+            students.forEach(student => {
+                const financial = calculateFinancial(student);
+                totalAmount += financial.finalFee;
+                totalPrice += student.pricePerHour;
+                priceCount++;
+
+                if (student.isSettled) {
+                    settledAmount += financial.finalFee;
+                } else {
+                    unsettledAmount += financial.finalFee;
+                }
+            });
+
+            const avgPrice = priceCount > 0 ? totalPrice / priceCount : 0;
+
+            return {
+                totalStudents,
+                unsettledCount,
+                unsettledAmount,
+                settledAmount,
+                totalAmount,
+                avgPrice
+            };
+        }
+
+        // Form Functions
+        function openForm(studentId = null) {
+            editingStudentId = studentId;
+            const modal = document.getElementById('form-modal');
+            const form = document.getElementById('student-form');
+
+            if (studentId) {
+                const student = students.find(s => s.id === studentId);
+                document.getElementById('form-title').textContent = '编辑学生';
+                document.getElementById('name').value = student.name;
+                document.getElementById('courseName').value = student.courseName;
+                document.getElementById('totalHours').value = student.totalHours;
+                document.getElementById('pricePerHour').value = student.pricePerHour;
+                document.getElementById('absenceCount').value = student.absenceCount;
+            } else {
+                document.getElementById('form-title').textContent = '添加学生';
+                form.reset();
+                document.getElementById('absenceCount').value = '0';
+            }
+
+            modal.classList.add('show');
+        }
+
+        function closeForm() {
+            document.getElementById('form-modal').classList.remove('show');
+            editingStudentId = null;
+        }
+
+        function submitForm() {
+            const form = document.getElementById('student-form');
+            const name = document.getElementById('name').value.trim();
+            const courseName = document.getElementById('courseName').value.trim();
+            const totalHours = parseFloat(document.getElementById('totalHours').value);
+            const pricePerHour = parseFloat(document.getElementById('pricePerHour').value);
+            const absenceCount = parseInt(document.getElementById('absenceCount').value) || 0;
+
+            if (!name) {
+                alert('请输入学生姓名');
+                return;
+            }
+            if (!courseName) {
+                alert('请输入课程名称');
+                return;
+            }
+            if (isNaN(totalHours) || totalHours <= 0) {
+                alert('请输入有效的总课时数');
+                return;
+            }
+            if (isNaN(pricePerHour) || pricePerHour <= 0) {
+                alert('请输入有效的单价');
+                return;
+            }
+
+            if (editingStudentId) {
+                const student = students.find(s => s.id === editingStudentId);
+                student.name = name;
+                student.courseName = courseName;
+                student.totalHours = totalHours;
+                student.pricePerHour = pricePerHour;
+                student.absenceCount = absenceCount;
+                student.updatedAt = Date.now();
+            } else {
+                const newStudent = {
+                    id: generateId(),
+                    name,
+                    courseName,
+                    totalHours,
+                    pricePerHour,
+                    absenceCount,
+                    isSettled: false,
+                    createdAt: Date.now(),
+                    updatedAt: Date.now()
+                };
+                students.push(newStudent);
+            }
+
+            saveStudents();
+            closeForm();
+            renderStudents();
+            renderSummary();
+            alert(editingStudentId ? '学生信息已更新' : '学生已添加');
+        }
+
+        // Detail Functions
+        function openDetail(studentId) {
+            selectedStudentId = studentId;
+            const student = students.find(s => s.id === studentId);
+            const financial = calculateFinancial(student);
+
+            document.getElementById('detail-name').textContent = student.name;
+            document.getElementById('detail-course').textContent = `课程：${student.courseName}`;
+            
+            const badge = document.getElementById('detail-badge');
+            if (student.isSettled) {
+                badge.style.display = 'inline-block';
+            } else {
+                badge.style.display = 'none';
+            }
+
+            const content = `
+                <div class="detail-section">
+                    <div class="info-row">
+                        <span class="info-label">课时数：</span>
+                        <span class="info-value">${student.totalHours}小时</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">单价：</span>
+                        <span class="info-value">${formatCurrency(student.pricePerHour)}/小时</span>
+                    </div>
+                    ${student.absenceCount > 0 ? `
+                        <div class="info-row">
+                            <span class="info-label">缺勤次数：</span>
+                            <span class="info-value">${student.absenceCount}次</span>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <div class="detail-section">
+                    <div class="info-row">
+                        <span class="info-label">应收学费：</span>
+                        <span class="info-value">${formatCurrency(financial.totalFee)}</span>
+                    </div>
+                    ${student.absenceCount > 0 ? `
+                        <div class="info-row warning">
+                            <span class="info-label">减免金额：</span>
+                            <span class="info-value">-${formatCurrency(financial.absenceFee)}</span>
+                        </div>
+                    ` : ''}
+                    <div class="info-row final">
+                        <span class="info-label">最终应收：</span>
+                        <span class="info-value final">${formatCurrency(financial.finalFee)}</span>
+                    </div>
+                </div>
+
+                <div class="detail-section timestamps">
+                    <small>创建时间：${new Date(student.createdAt).toLocaleString('zh-CN')}</small><br>
+                    <small>最后修改：${new Date(student.updatedAt).toLocaleString('zh-CN')}</small>
+                </div>
+            `;
+
+            document.getElementById('detail-content').innerHTML = content;
+            document.getElementById('detail-modal').classList.add('show');
+        }
+
+        function closeDetail() {
+            document.getElementById('detail-modal').classList.remove('show');
+            selectedStudentId = null;
+        }
+
+        function editCurrentStudent() {
+            closeDetail();
+            openForm(selectedStudentId);
+        }
+
+        function deleteCurrentStudent() {
+            if (confirm(`确定要删除学生 ${students.find(s => s.id === selectedStudentId).name} 的记录吗？此操作无法撤销。`)) {
+                students = students.filter(s => s.id !== selectedStudentId);
+                saveStudents();
+                closeDetail();
+                renderStudents();
+                renderSummary();
+                alert('学生已删除');
+            }
+        }
+
+        // Initialize on load
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
