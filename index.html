@@ -183,8 +183,10 @@
         .fee-row {
             display: flex;
             justify-content: space-between;
+            align-items: center;
             font-size: 13px;
             margin: 4px 0;
+            gap: 8px;
         }
 
         .fee-row.final {
@@ -195,10 +197,13 @@
 
         .fee-label {
             color: var(--muted);
+            flex-shrink: 0;
         }
 
         .fee-value {
             font-weight: 600;
+            text-align: right;
+            flex-shrink: 0;
         }
 
         .empty-state {
