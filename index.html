@@ -156,10 +156,22 @@
             font-weight: 600;
         }
 
-        .course-info, .hours-info, .absence-info {
+        .course-list {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .course-item {
             font-size: 13px;
             color: var(--muted);
-            margin: 4px 0;
+            margin: 6px 0;
+            padding: 6px 0;
+        }
+
+        .course-item-name {
+            font-weight: 600;
+            color: var(--foreground);
         }
 
         .student-card-footer {
@@ -344,6 +356,85 @@
             margin-top: 4px;
         }
 
+        .courses-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .courses-section h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--foreground);
+        }
+
+        .course-input-group {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+
+        .course-input-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 8px;
+            font-family: inherit;
+        }
+
+        .course-input-group input:last-child {
+            margin-bottom: 0;
+        }
+
+        .course-input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 8px;
+            align-items: flex-end;
+        }
+
+        .course-input-row input {
+            margin-bottom: 0;
+        }
+
+        .btn-remove-course {
+            background: var(--error);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .btn-remove-course:hover {
+            opacity: 0.9;
+        }
+
+        .btn-add-course {
+            background: var(--surface);
+            color: var(--primary);
+            border: 1px solid var(--primary);
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            font-weight: 600;
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        .btn-add-course:hover {
+            background: var(--primary);
+            color: white;
+        }
+
         .modal-actions {
             display: flex;
             gap: 12px;
@@ -484,6 +575,10 @@
                 height: 48px;
                 font-size: 24px;
             }
+
+            .course-input-row {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -555,32 +650,15 @@
                     <input type="text" id="name" placeholder="输入学生姓名" required>
                 </div>
 
-                <div class="form-group">
-                    <label for="courseName">课程名称 *</label>
-                    <input type="text" id="courseName" placeholder="例如：数学、英语、编程" required>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="totalHours">总课时数 *</label>
-                        <input type="number" id="totalHours" placeholder="输入总课时数" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="pricePerHour">单价（元/课时）*</label>
-                        <input type="number" id="pricePerHour" placeholder="输入单价" required>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="absenceCount">缺勤次数</label>
-                    <input type="number" id="absenceCount" placeholder="输入缺勤次数（默认为0）" value="0">
-                    <small class="help-text">缺勤次数将从应收学费中扣除</small>
+                <div class="courses-section">
+                    <h3>课程信息</h3>
+                    <div id="courses-container"></div>
+                    <button type="button" class="btn-add-course" onclick="addCourseInput()">+ 添加课程</button>
                 </div>
             </form>
             <div class="modal-actions">
                 <button type="button" class="btn btn-cancel" onclick="closeForm()">取消</button>
-                <button type="button" class="btn btn-primary" onclick="submitForm()">添加</button>
+                <button type="button" class="btn btn-primary" onclick="submitForm()">保存</button>
             </div>
         </div>
     </div>
@@ -591,7 +669,7 @@
             <div class="modal-header">
                 <div>
                     <h2 id="detail-name"></h2>
-                    <p id="detail-course" style="margin: 0; font-size: 14px; color: var(--muted);"></p>
+                    <p id="detail-courses" style="margin: 0; font-size: 13px; color: var(--muted);"></p>
                 </div>
                 <span id="detail-badge" class="status-badge" style="display: none;">已结算</span>
                 <button class="close-btn" onclick="closeDetail()">✕</button>
@@ -611,7 +689,7 @@
 
     <script>
         // Storage Key
-        const STORAGE_KEY = 'tuition_manager_students';
+        const STORAGE_KEY = 'tuition_manager_students_v2';
 
         // State
         let students = [];
@@ -645,8 +723,16 @@
 
         // Calculate Financial
         function calculateFinancial(student) {
-            const totalFee = student.totalHours * student.pricePerHour;
-            const absenceFee = student.absenceCount * student.pricePerHour;
+            let totalFee = 0;
+            let absenceFee = 0;
+
+            student.courses.forEach(course => {
+                const courseFee = course.classes * course.pricePerClass;
+                const courseAbsenceFee = course.absenceCount * course.pricePerClass;
+                totalFee += courseFee;
+                absenceFee += courseAbsenceFee;
+            });
+
             const finalFee = Math.max(0, totalFee - absenceFee);
             return { totalFee, absenceFee, finalFee };
         }
@@ -680,10 +766,11 @@
             if (query.trim() === '') {
                 return students;
             }
-            return students.filter(s => 
-                s.name.toLowerCase().includes(query) || 
-                s.courseName.toLowerCase().includes(query)
-            );
+            return students.filter(s => {
+                const nameMatch = s.name.toLowerCase().includes(query);
+                const courseMatch = s.courses.some(c => c.name.toLowerCase().includes(query));
+                return nameMatch || courseMatch;
+            });
         }
 
         // Render Students
@@ -727,9 +814,19 @@
         function renderStudentCard(student) {
             const financial = calculateFinancial(student);
             const badge = student.isSettled ? '<span class="status-badge">已结算</span>' : '';
-            const absenceHtml = student.absenceCount > 0 
-                ? `<div class="absence-info">缺勤：${student.absenceCount}次 (减免 ${formatCurrency(financial.absenceFee)})</div>`
-                : '';
+            
+            const coursesList = student.courses.map(course => {
+                const courseFee = course.classes * course.pricePerClass;
+                const courseAbsenceFee = course.absenceCount * course.pricePerClass;
+                const courseFinal = Math.max(0, courseFee - courseAbsenceFee);
+                
+                let absenceText = '';
+                if (course.absenceCount > 0) {
+                    absenceText = ` (缺勤${course.absenceCount}节，减免${formatCurrency(courseAbsenceFee)})`;
+                }
+                
+                return `<div class="course-item"><span class="course-item-name">${course.name}</span>：${course.classes}节 × ${formatCurrency(course.pricePerClass)}/节 = ${formatCurrency(courseFinal)}${absenceText}</div>`;
+            }).join('');
 
             return `
                 <div class="student-card" onclick="openDetail('${student.id}')">
@@ -737,10 +834,8 @@
                         <h3 class="student-name">${student.name}</h3>
                         ${badge}
                     </div>
-                    <div>
-                        <p class="course-info">课程：${student.courseName}</p>
-                        <p class="hours-info">课时：${student.totalHours}小时 × ${formatCurrency(student.pricePerHour)}/小时</p>
-                        ${absenceHtml}
+                    <div class="course-list">
+                        ${coursesList}
                     </div>
                     <div class="student-card-footer">
                         <div class="fee-row">
@@ -783,7 +878,6 @@
                                         <h3 class="student-name">${s.name}</h3>
                                         <span class="status-badge">已结算</span>
                                     </div>
-                                    <p class="course-info">课程：${s.courseName}</p>
                                     <div class="student-card-footer">
                                         <div class="fee-row final">
                                             <span class="fee-label">应收：</span>
@@ -814,8 +908,11 @@
             students.forEach(student => {
                 const financial = calculateFinancial(student);
                 totalAmount += financial.finalFee;
-                totalPrice += student.pricePerHour;
-                priceCount++;
+
+                student.courses.forEach(course => {
+                    totalPrice += course.pricePerClass;
+                    priceCount++;
+                });
 
                 if (student.isSettled) {
                     settledAmount += financial.finalFee;
@@ -840,71 +937,115 @@
         function openForm(studentId = null) {
             editingStudentId = studentId;
             const modal = document.getElementById('form-modal');
-            const form = document.getElementById('student-form');
 
             if (studentId) {
                 const student = students.find(s => s.id === studentId);
                 document.getElementById('form-title').textContent = '编辑学生';
                 document.getElementById('name').value = student.name;
-                document.getElementById('courseName').value = student.courseName;
-                document.getElementById('totalHours').value = student.totalHours;
-                document.getElementById('pricePerHour').value = student.pricePerHour;
-                document.getElementById('absenceCount').value = student.absenceCount;
+                renderCourseInputs(student.courses);
             } else {
                 document.getElementById('form-title').textContent = '添加学生';
-                form.reset();
-                document.getElementById('absenceCount').value = '0';
+                document.getElementById('name').value = '';
+                renderCourseInputs([]);
             }
 
             modal.classList.add('show');
         }
 
+        function renderCourseInputs(courses = []) {
+            let html = '';
+            
+            if (courses.length === 0) {
+                courses = [{ name: '', classes: '', pricePerClass: '', absenceCount: 0 }];
+            }
+
+            courses.forEach((course, index) => {
+                html += `
+                    <div class="course-input-group">
+                        <input type="text" placeholder="课程名称" value="${course.name || ''}" onchange="updateCourseInput(${index}, 'name', this.value)">
+                        <div class="course-input-row">
+                            <input type="number" placeholder="课节数" value="${course.classes || ''}" onchange="updateCourseInput(${index}, 'classes', this.value)">
+                            <input type="number" placeholder="单价" value="${course.pricePerClass || ''}" onchange="updateCourseInput(${index}, 'pricePerClass', this.value)">
+                            <input type="number" placeholder="缺勤" value="${course.absenceCount || 0}" onchange="updateCourseInput(${index}, 'absenceCount', this.value)">
+                            ${courses.length > 1 ? `<button type="button" class="btn-remove-course" onclick="removeCourseInput(${index})">删除</button>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('courses-container').innerHTML = html;
+        }
+
+        let courseInputs = [];
+
+        function updateCourseInput(index, field, value) {
+            if (!courseInputs[index]) {
+                courseInputs[index] = { name: '', classes: '', pricePerClass: '', absenceCount: 0 };
+            }
+            courseInputs[index][field] = field === 'absenceCount' ? parseInt(value) || 0 : value;
+        }
+
+        function removeCourseInput(index) {
+            const inputs = document.querySelectorAll('.course-input-group');
+            if (inputs.length > 1) {
+                courseInputs.splice(index, 1);
+                renderCourseInputs(courseInputs);
+            }
+        }
+
+        function addCourseInput() {
+            courseInputs.push({ name: '', classes: '', pricePerClass: '', absenceCount: 0 });
+            renderCourseInputs(courseInputs);
+        }
+
         function closeForm() {
             document.getElementById('form-modal').classList.remove('show');
             editingStudentId = null;
+            courseInputs = [];
         }
 
         function submitForm() {
-            const form = document.getElementById('student-form');
             const name = document.getElementById('name').value.trim();
-            const courseName = document.getElementById('courseName').value.trim();
-            const totalHours = parseFloat(document.getElementById('totalHours').value);
-            const pricePerHour = parseFloat(document.getElementById('pricePerHour').value);
-            const absenceCount = parseInt(document.getElementById('absenceCount').value) || 0;
+            
+            // 收集课程信息
+            const courseInputs = [];
+            document.querySelectorAll('.course-input-group').forEach((group, index) => {
+                const inputs = group.querySelectorAll('input');
+                const courseName = inputs[0].value.trim();
+                const classes = parseInt(inputs[1].value);
+                const pricePerClass = parseFloat(inputs[2].value);
+                const absenceCount = parseInt(inputs[3].value) || 0;
+
+                if (courseName && !isNaN(classes) && !isNaN(pricePerClass)) {
+                    courseInputs.push({
+                        name: courseName,
+                        classes,
+                        pricePerClass,
+                        absenceCount
+                    });
+                }
+            });
 
             if (!name) {
                 alert('请输入学生姓名');
                 return;
             }
-            if (!courseName) {
-                alert('请输入课程名称');
-                return;
-            }
-            if (isNaN(totalHours) || totalHours <= 0) {
-                alert('请输入有效的总课时数');
-                return;
-            }
-            if (isNaN(pricePerHour) || pricePerHour <= 0) {
-                alert('请输入有效的单价');
+
+            if (courseInputs.length === 0) {
+                alert('请至少添加一个课程');
                 return;
             }
 
             if (editingStudentId) {
                 const student = students.find(s => s.id === editingStudentId);
                 student.name = name;
-                student.courseName = courseName;
-                student.totalHours = totalHours;
-                student.pricePerHour = pricePerHour;
-                student.absenceCount = absenceCount;
+                student.courses = courseInputs;
                 student.updatedAt = Date.now();
             } else {
                 const newStudent = {
                     id: generateId(),
                     name,
-                    courseName,
-                    totalHours,
-                    pricePerHour,
-                    absenceCount,
+                    courses: courseInputs,
                     isSettled: false,
                     createdAt: Date.now(),
                     updatedAt: Date.now()
@@ -926,7 +1067,9 @@
             const financial = calculateFinancial(student);
 
             document.getElementById('detail-name').textContent = student.name;
-            document.getElementById('detail-course').textContent = `课程：${student.courseName}`;
+            
+            const courseNames = student.courses.map(c => c.name).join('、');
+            document.getElementById('detail-courses').textContent = `课程：${courseNames}`;
             
             const badge = document.getElementById('detail-badge');
             if (student.isSettled) {
@@ -935,44 +1078,55 @@
                 badge.style.display = 'none';
             }
 
-            const content = `
-                <div class="detail-section">
-                    <div class="info-row">
-                        <span class="info-label">课时数：</span>
-                        <span class="info-value">${student.totalHours}小时</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">单价：</span>
-                        <span class="info-value">${formatCurrency(student.pricePerHour)}/小时</span>
-                    </div>
-                    ${student.absenceCount > 0 ? `
+            let content = '<div class="detail-section">';
+            
+            student.courses.forEach(course => {
+                const courseFee = course.classes * course.pricePerClass;
+                const courseAbsenceFee = course.absenceCount * course.pricePerClass;
+                const courseFinal = Math.max(0, courseFee - courseAbsenceFee);
+                
+                content += `
+                    <div style="margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border);">
+                        <div style="font-weight: 600; margin-bottom: 8px; color: var(--foreground);">${course.name}</div>
                         <div class="info-row">
-                            <span class="info-label">缺勤次数：</span>
-                            <span class="info-value">${student.absenceCount}次</span>
+                            <span class="info-label">课节数：</span>
+                            <span class="info-value">${course.classes}节</span>
                         </div>
-                    ` : ''}
-                </div>
-
-                <div class="detail-section">
-                    <div class="info-row">
-                        <span class="info-label">应收学费：</span>
-                        <span class="info-value">${formatCurrency(financial.totalFee)}</span>
+                        <div class="info-row">
+                            <span class="info-label">单价：</span>
+                            <span class="info-value">${formatCurrency(course.pricePerClass)}/节</span>
+                        </div>
+                        ${course.absenceCount > 0 ? `
+                            <div class="info-row">
+                                <span class="info-label">缺勤：</span>
+                                <span class="info-value">${course.absenceCount}节</span>
+                            </div>
+                        ` : ''}
+                        <div class="info-row">
+                            <span class="info-label">应收：</span>
+                            <span class="info-value">${formatCurrency(courseFee)}</span>
+                        </div>
+                        ${course.absenceCount > 0 ? `
+                            <div class="info-row">
+                                <span class="info-label">减免：</span>
+                                <span class="info-value">-${formatCurrency(courseAbsenceFee)}</span>
+                            </div>
+                        ` : ''}
+                        <div class="info-row" style="font-weight: 600; color: var(--primary);">
+                            <span class="info-label">小计：</span>
+                            <span class="info-value">${formatCurrency(courseFinal)}</span>
+                        </div>
                     </div>
-                    ${student.absenceCount > 0 ? `
-                        <div class="info-row warning">
-                            <span class="info-label">减免金额：</span>
-                            <span class="info-value">-${formatCurrency(financial.absenceFee)}</span>
-                        </div>
-                    ` : ''}
+                `;
+            });
+
+            content += `
+                </div>
+                <div class="detail-section">
                     <div class="info-row final">
-                        <span class="info-label">最终应收：</span>
+                        <span class="info-label">总应收：</span>
                         <span class="info-value final">${formatCurrency(financial.finalFee)}</span>
                     </div>
-                </div>
-
-                <div class="detail-section timestamps">
-                    <small>创建时间：${new Date(student.createdAt).toLocaleString('zh-CN')}</small><br>
-                    <small>最后修改：${new Date(student.updatedAt).toLocaleString('zh-CN')}</small>
                 </div>
             `;
 
