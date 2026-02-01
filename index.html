@@ -435,6 +435,44 @@
             color: white;
         }
 
+        .discount-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .discount-section h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--foreground);
+        }
+
+        .discount-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .discount-row .form-group {
+            margin-bottom: 0;
+        }
+
+        .discount-row input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .discount-row input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(10, 126, 164, 0.1);
+        }
+
         .modal-actions {
             display: flex;
             gap: 12px;
@@ -579,6 +617,10 @@
             .course-input-row {
                 grid-template-columns: 1fr;
             }
+
+            .discount-row {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -655,6 +697,20 @@
                     <div id="courses-container"></div>
                     <button type="button" class="btn-add-course" onclick="addCourseInput()">+ 添加课程</button>
                 </div>
+
+                <div class="discount-section">
+                    <h3>减免信息</h3>
+                    <div class="discount-row">
+                        <div class="form-group">
+                            <label for="classRemaining">课余减免（元）</label>
+                            <input type="number" id="classRemaining" placeholder="输入课余减免金额" value="0" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label for="discountPrice">优惠价格（元）</label>
+                            <input type="number" id="discountPrice" placeholder="输入优惠金额" value="0" step="0.01">
+                        </div>
+                    </div>
+                </div>
             </form>
             <div class="modal-actions">
                 <button type="button" class="btn btn-cancel" onclick="closeForm()">取消</button>
@@ -689,7 +745,7 @@
 
     <script>
         // Storage Key
-        const STORAGE_KEY = 'tuition_manager_students_v2';
+        const STORAGE_KEY = 'tuition_manager_students_v3';
 
         // State
         let students = [];
@@ -733,8 +789,10 @@
                 absenceFee += courseAbsenceFee;
             });
 
-            const finalFee = Math.max(0, totalFee - absenceFee);
-            return { totalFee, absenceFee, finalFee };
+            const classRemaining = student.classRemaining || 0;
+            const discountPrice = student.discountPrice || 0;
+            const finalFee = Math.max(0, totalFee - absenceFee - classRemaining - discountPrice);
+            return { totalFee, absenceFee, classRemaining, discountPrice, finalFee };
         }
 
         function formatCurrency(value) {
@@ -828,6 +886,18 @@
                 return `<div class="course-item"><span class="course-item-name">${course.name}</span>：${course.classes}节 × ${formatCurrency(course.pricePerClass)}/节 = ${formatCurrency(courseFinal)}${absenceText}</div>`;
             }).join('');
 
+            let discountInfo = '';
+            if (student.classRemaining > 0 || student.discountPrice > 0) {
+                discountInfo = '<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 12px; color: var(--muted);">';
+                if (student.classRemaining > 0) {
+                    discountInfo += `课余减免：${formatCurrency(student.classRemaining)} `;
+                }
+                if (student.discountPrice > 0) {
+                    discountInfo += `优惠：${formatCurrency(student.discountPrice)}`;
+                }
+                discountInfo += '</div>';
+            }
+
             return `
                 <div class="student-card" onclick="openDetail('${student.id}')">
                     <div class="student-card-header">
@@ -836,12 +906,19 @@
                     </div>
                     <div class="course-list">
                         ${coursesList}
+                        ${discountInfo}
                     </div>
                     <div class="student-card-footer">
                         <div class="fee-row">
                             <span class="fee-label">应收学费：</span>
                             <span class="fee-value">${formatCurrency(financial.totalFee)}</span>
                         </div>
+                        ${(financial.absenceFee > 0 || financial.classRemaining > 0 || financial.discountPrice > 0) ? `
+                            <div class="fee-row" style="color: var(--warning); font-size: 12px;">
+                                <span class="fee-label">减免合计：</span>
+                                <span class="fee-value">-${formatCurrency(financial.absenceFee + financial.classRemaining + financial.discountPrice)}</span>
+                            </div>
+                        ` : ''}
                         <div class="fee-row final">
                             <span class="fee-label">最终应收：</span>
                             <span class="fee-value">${formatCurrency(financial.finalFee)}</span>
@@ -942,10 +1019,14 @@
                 const student = students.find(s => s.id === studentId);
                 document.getElementById('form-title').textContent = '编辑学生';
                 document.getElementById('name').value = student.name;
+                document.getElementById('classRemaining').value = student.classRemaining || 0;
+                document.getElementById('discountPrice').value = student.discountPrice || 0;
                 renderCourseInputs(student.courses);
             } else {
                 document.getElementById('form-title').textContent = '添加学生';
                 document.getElementById('name').value = '';
+                document.getElementById('classRemaining').value = 0;
+                document.getElementById('discountPrice').value = 0;
                 renderCourseInputs([]);
             }
 
@@ -1036,16 +1117,23 @@
                 return;
             }
 
+            const classRemaining = parseFloat(document.getElementById('classRemaining').value) || 0;
+            const discountPrice = parseFloat(document.getElementById('discountPrice').value) || 0;
+
             if (editingStudentId) {
                 const student = students.find(s => s.id === editingStudentId);
                 student.name = name;
                 student.courses = courseInputs;
+                student.classRemaining = classRemaining;
+                student.discountPrice = discountPrice;
                 student.updatedAt = Date.now();
             } else {
                 const newStudent = {
                     id: generateId(),
                     name,
                     courses: courseInputs,
+                    classRemaining: classRemaining,
+                    discountPrice: discountPrice,
                     isSettled: false,
                     createdAt: Date.now(),
                     updatedAt: Date.now()
@@ -1123,8 +1211,30 @@
             content += `
                 </div>
                 <div class="detail-section">
+                    <div class="info-row">
+                        <span class="info-label">课程总计：</span>
+                        <span class="info-value">${formatCurrency(financial.totalFee)}</span>
+                    </div>
+                    ${financial.absenceFee > 0 ? `
+                        <div class="info-row">
+                            <span class="info-label">缺勤减免：</span>
+                            <span class="info-value">-${formatCurrency(financial.absenceFee)}</span>
+                        </div>
+                    ` : ''}
+                    ${financial.classRemaining > 0 ? `
+                        <div class="info-row">
+                            <span class="info-label">课余减免：</span>
+                            <span class="info-value">-${formatCurrency(financial.classRemaining)}</span>
+                        </div>
+                    ` : ''}
+                    ${financial.discountPrice > 0 ? `
+                        <div class="info-row">
+                            <span class="info-label">优惠价格：</span>
+                            <span class="info-value">-${formatCurrency(financial.discountPrice)}</span>
+                        </div>
+                    ` : ''}
                     <div class="info-row final">
-                        <span class="info-label">总应收：</span>
+                        <span class="info-label">最终应收：</span>
                         <span class="info-value final">${formatCurrency(financial.finalFee)}</span>
                     </div>
                 </div>
