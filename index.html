@@ -1286,7 +1286,9 @@
         function editCurrentStudent() {
             const studentId = selectedStudentId;
             closeDetail();
-            openForm(studentId);
+            setTimeout(() => {
+                openForm(studentId);
+            }, 100);
         }
 
         function deleteCurrentStudent() {
