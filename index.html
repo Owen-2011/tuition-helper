@@ -181,7 +181,6 @@
         }
 
         .fee-row {
-            display: block;
             font-size: 13px;
             margin: 4px 0;
         }
@@ -194,16 +193,6 @@
 
         .fee-label {
             color: var(--muted);
-        }
-
-        .fee-label::after {
-            content: '';
-        }
-
-        .fee-value {
-            font-weight: 600;
-            display: inline;
-            margin-left: 0;
         }
 
         .empty-state {
@@ -944,18 +933,15 @@
                     </div>
                     <div class="student-card-footer">
                         <div class="fee-row">
-                            <span class="fee-label">应收学费：</span>
-                            <span class="fee-value">${formatCurrency(financial.totalFee)}</span>
+                            <span class="fee-label">应收学费：${formatCurrency(financial.totalFee)}</span>
                         </div>
                         ${(financial.absenceFee > 0 || financial.classRemaining > 0 || financial.discountPrice > 0) ? `
                             <div class="fee-row" style="color: var(--warning); font-size: 12px;">
-                                <span class="fee-label">减免合计：</span>
-                                <span class="fee-value">-${formatCurrency(financial.absenceFee + financial.classRemaining + financial.discountPrice)}</span>
+                                <span class="fee-label">减免合计：-${formatCurrency(financial.absenceFee + financial.classRemaining + financial.discountPrice)}</span>
                             </div>
                         ` : ''}
                         <div class="fee-row final">
-                            <span class="fee-label">最终应收：</span>
-                            <span class="fee-value">${formatCurrency(financial.finalFee)}</span>
+                            <span class="fee-label">最终应收：${formatCurrency(financial.finalFee)}</span>
                         </div>
                     </div>
                 </div>
