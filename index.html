@@ -1062,6 +1062,9 @@
                 courses = [{ name: '', classes: '', pricePerClass: '', absenceCount: 0 }];
             }
 
+            // 初始化 courseInputs 数组
+            courseInputs = courses.map(course => ({ ...course }));
+
             courses.forEach((course, index) => {
                 html += `
                     <div class="course-input-group">
