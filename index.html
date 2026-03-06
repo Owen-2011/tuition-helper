@@ -916,7 +916,7 @@
                     discountInfo += `优惠：${formatCurrency(student.discountPrice)} `;
                 }
                 if (student.remarks) {
-                    discountInfo += `备注：${student.remarks.substring(0, 20)}${student.remarks.length > 20 ? '...' : ''}`;
+                    discountInfo += `备注：${student.remarks.replace(/\n/g, '<br>')}`;
                 }
                 discountInfo += '</div>';
             }
